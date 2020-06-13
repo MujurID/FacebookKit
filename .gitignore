@@ -1,0 +1,9 @@
+#-------------------------
+# Composer
+#-------------------------
+#vendor/
+composer.lock
+
+# Log
+scripts/log/*
+!scripts/log/index.html
