@@ -8,13 +8,14 @@ Class FacebookCookie
 
 	public static function ReadCookie($response) 
 	{
+
 		preg_match_all('/^Set-Cookie:\s*([^;]*)/mi', $response, $results);
 		$cookies = '';
 		for($o = 0; $o < count($results[0]); $o++){
 			$cookies.=$results[1][$o].";";
 		}
 
-		if (!$cookies) die("Cookie Tidak bisa diambil, kesalahan pada kode.");
+		if (!$cookies) return false;
 
 		return $cookies;
 	}
