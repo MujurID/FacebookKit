@@ -1,6 +1,6 @@
 <?php  
 /**
-* Facebook Auto Reaction TimeLine v1.2
+* Facebook Auto Reaction v1.3
 * Last Update 13 Juni 2020
 * Author : Faanteyki
 */
@@ -9,7 +9,12 @@ require "../vendor/autoload.php";
 use Riedayme\FacebookKit\FacebookAuth;
 use Riedayme\FacebookKit\FacebookCookie;
 use Riedayme\FacebookKit\FacebookChecker;
+
+use Riedayme\FacebookKit\FacebookGroupList;
+use Riedayme\FacebookKit\FacebookFeedGroup;
+
 use Riedayme\FacebookKit\FacebookFeedTimeLine;
+
 use Riedayme\FacebookKit\FacebookPostComments;
 use Riedayme\FacebookKit\FacebookPostReaction;
 
@@ -39,7 +44,7 @@ Class InputHelper
 
 		if ($data) return $data;
 
-		$CheckPreviousCookie = FacebookAutoReactTimeLine::CheckPreviousCookie();
+		$CheckPreviousCookie = FacebookAutoReaction::CheckPreviousCookie();
 
 		if ($CheckPreviousCookie) 
 		{
@@ -153,22 +158,72 @@ Class InputHelper
 		}
 
 		return (!$input) ? die('Pilihan masih Kosong'.PHP_EOL) : $input;
-	}			
+	}
+
+	public function GetInputChoiceTargetReaction($data = false) 
+	{
+
+		if ($data) return $data;
+
+		echo "Pilihan Jenis Target Feed : ".PHP_EOL;
+		echo "[1] Feed Timeline".PHP_EOL;
+		echo "[2] Feed Group".PHP_EOL;
+
+		$input = trim(fgets(STDIN));
+
+		if (!in_array(strtolower($input),['1','2'])) 
+		{
+			die("Pilihan tidak diketahui".PHP_EOL);
+		}
+
+		return (!$input) ? die('Pilihan masih Kosong'.PHP_EOL) : $input;
+	}		
+
+	public function GetInputGroupName($data = false) {
+
+		if ($data) return $data;
+
+		echo "Cari Nama Group (karakter): ".PHP_EOL;
+
+		$input = trim(fgets(STDIN));
+
+		return (!$input) ? die('Nama Group Masih Kosong'.PHP_EOL) : $input;
+	}	
+
+	public function GetInputChoiceGroup($data = false) {
+
+		if ($data) return $data;
+
+		echo "Masukan Group yang dipilih (angka): ".PHP_EOL;
+
+		$input = trim(fgets(STDIN));
+
+		if (strval($input) !== strval(intval($input))) {
+			die("Salah memasukan format, pastikan hanya angka".PHP_EOL);
+		}
+
+		return $input;
+	}				
 }
 
-Class FacebookAutoReactTimeLine
+Class FacebookAutoReaction
 {
 
 	public $login_data;
 	public $cookie;
 	public $access_token;	
 	public $username;
+
+	public $targetreaction;
+	public $targetreactionname;
 	public $limit;
 	public $react;
 
+	public $groupid;
+
 	public function Auth($data,$ReAuth = false) 
 	{
-		
+
 		if ($data['type'] == 'previous_cookie') 
 		{
 			$results = self::ReadPreviousCookie($data['cookie']);
@@ -190,7 +245,7 @@ Class FacebookAutoReactTimeLine
 				self::SaveCookie($results);
 			}
 		}elseif ($data['type'] == 'new_cookie') {
-			echo "[INFO] Validate Cookie <-------------".PHP_EOL;
+			echo "[INFO] Validate Cookie".PHP_EOL;
 
 			$auth = new FacebookAuth();
 			$results =$auth->AuthUsingCookie($data['cookie']);
@@ -214,11 +269,15 @@ Class FacebookAutoReactTimeLine
 		$this->cookie = $results['cookie'];
 		$this->access_token = $results['access_token'];
 		if (!$ReAuth) {
+			$this->targetreaction = InputHelper::GetInputChoiceTargetReaction();
+			if ($this->targetreaction == '2') {
+				$this->targetreactionname = 'Group';
+				$this->groupid = self::ChoiceGroup();
+			}else{
+				$this->targetreactionname = 'Timeline';
+			}
 			$this->limit = InputHelper::GetInputLimit();
 			$this->react = InputHelper::GetInputReact();
-		}else{
-			echo json_encode($data);
-			exit;
 		}
 	}
 
@@ -298,11 +357,24 @@ Class FacebookAutoReactTimeLine
 	public function GetFeed()
 	{
 
-		echo "[INFO] Membaca Feed Timeline".PHP_EOL;
+		echo "[INFO] Membaca Feed {$this->targetreactionname}".PHP_EOL;
 
-		$Feed = new FacebookFeedTimeLine();
-		$Feed->SetAccessToken($this->access_token);		
-		$results =$Feed->GetTimeLineByToken($this->limit);
+		if ($this->targetreaction == '2') 
+		{
+			$Feed = new FacebookFeedGroup();
+			$Feed->SetAccessToken($this->access_token);
+
+			$results =$Feed->GetFeedGroupByToken([
+				'groupid' => $this->groupid,
+				'limit' => $this->limit
+				]);
+		}
+		elseif ($this->targetreaction == '1') 
+		{
+			$Feed = new FacebookFeedTimeLine();
+			$Feed->SetAccessToken($this->access_token);		
+			$results =$Feed->GetTimeLineByToken($this->limit);
+		}
 
 		/* check if feed not loaded */
 		if (!$results) 
@@ -385,6 +457,38 @@ Class FacebookAutoReactTimeLine
 		return false;
 	}
 
+	public function ChoiceGroup()
+	{
+		echo "[INFO] Mendapatkan List Group".PHP_EOL;
+
+		$Group = new FacebookGroupList();
+		$Group->SetCookie($this->cookie);
+
+		$results =$Group->GetGroupListByScraping();
+
+		echo "[INFO] Ditemukan ".count($results)." Group".PHP_EOL;
+
+		$search = InputHelper::GetInputGroupName();
+
+		$search_results = array();
+		foreach ($results as $key => $group) {
+			if (preg_match("/{$search}/i", $group['name'])) {
+				$search_results[] = "[{$key}]".$group['name'].PHP_EOL;
+			}
+		}
+
+		if (!$search_results) {
+			echo "[INFO] Group tidak ditemukan, coba kembali.".PHP_EOL;
+			return self::ChoiceGroup();
+		}else{
+			echo "[INFO] Daftar Group yang ditemukan : ".PHP_EOL;			
+			echo implode('', $search_results);
+		}
+
+		$choice = InputHelper::GetInputChoiceGroup();
+		return $results[$choice]['id'];
+	}	
+
 	public function ReAuth()
 	{
 
@@ -408,7 +512,7 @@ Class FacebookAutoReactTimeLine
 	public function ReadLog()
 	{		
 
-		$logfilename = "log/feedtimeline-data-{$this->username}";
+		$logfilename = "log/{$this->targetreactionname}{$this->groupid}-{$this->username}";
 		$log_url = array();
 		if (file_exists($logfilename)) 
 		{
@@ -421,7 +525,7 @@ Class FacebookAutoReactTimeLine
 
 	public function SaveLog($datapost)
 	{
-		return file_put_contents("log/feedtimeline-data-{$this->username}", $datapost.PHP_EOL, FILE_APPEND);
+		return file_put_contents("log/{$this->targetreactionname}{$this->groupid}-{$this->username}", $datapost.PHP_EOL, FILE_APPEND);
 	}
 }
 
@@ -430,7 +534,7 @@ Class Worker
 	public function Run()
 	{
 
-		echo " --- Facebook Auto Reaction TimeLine v1.0 ---".PHP_EOL;
+		echo " --- Facebook Auto Reaction v1.3 ---".PHP_EOL;
 
 		$login_choice = InputHelper::GetInputChoiceLogin();
 
@@ -461,7 +565,7 @@ Class Worker
 		$delayfeed = 10;
 
 		/* Call Class */
-		$Working = new FacebookAutoReactTimeLine();
+		$Working = new FacebookAutoReaction();
 		$Working->Auth($data);
 
 		$react_comment = InputHelper::GetInputReactComment();
@@ -539,7 +643,7 @@ Class Worker
 
 						if ($process_comment) 
 						{
-							echo "[INFO] Delay {$delay}-".PHP_EOL;
+							echo "[INFO] Delay {$delay}".PHP_EOL;
 							sleep($delay);
 
 							$delay = $delay+5;

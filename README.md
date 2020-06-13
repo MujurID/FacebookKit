@@ -17,16 +17,17 @@ View on examples folder
 ```
 the Script locate on folder scripts
 
-Run Auto Reaction TimeLine :
-php ART.php
-
-Run Auto Reaction Group Target :
-php ARG.php
+Run Auto Reaction :
+php AR.php
 ```
 
 ## Change Log
-**9 Juni 2020**
-- Release Script
+**13 Juni 2020**
+- Join Code Reaction Time Line and Group
+- Fix Bug Code
 
 **10 Juni 2020**
 - Add Auto Reaction Group
+
+**9 Juni 2020**
+- Release Script
