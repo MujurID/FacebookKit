@@ -18,10 +18,7 @@ class FacebookGroupList
 		
 		$headers = array();
 		$headers[] = 'User-Agent: '.FacebookUserAgent::Get('Windows');
-		$headers[] = 'Sec-Fetch-Site: none';
-		$headers[] = 'Sec-Fetch-Mode: navigate';
 		$headers[] = 'Sec-Fetch-User: ?1';
-		$headers[] = 'Sec-Fetch-Dest: document';
 		$headers[] = 'Cookie: '.$this->cookie;	
 
 		$access = FacebookHelper::curl($url,false,$headers);

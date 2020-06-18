@@ -11,9 +11,9 @@ class FacebookPostReaction
 		return $this->cookie = $data;
 	}	
 
-	public function SetFbDstg() 
+	public function SetFbDTSG() 
 	{
-		return $this->fb_dtsg = FacebookDTSG::GetFromProfile($this->cookie);
+		return $this->fb_dtsg = FacebookFormRequired::GetFbDTSG($this->cookie);
 	}		
 
 	public function ReactPostByScraping($data)
@@ -25,10 +25,7 @@ class FacebookPostReaction
 
 		$headers = array();
 		$headers[] = 'User-Agent: '.FacebookUserAgent::Get('Windows');
-		$headers[] = 'Sec-Fetch-Site: none';
-		$headers[] = 'Sec-Fetch-Mode: navigate';
 		$headers[] = 'Sec-Fetch-User: ?1';
-		$headers[] = 'Sec-Fetch-Dest: document';
 		$headers[] = 'Cookie: '.$this->cookie;	
 
 		$access = FacebookHelper::curl($url,false,$headers);
@@ -55,10 +52,7 @@ class FacebookPostReaction
 		
 		$headers = array();
 		$headers[] = 'User-Agent: '.FacebookUserAgent::Get('Windows');
-		$headers[] = 'Sec-Fetch-Site: none';
-		$headers[] = 'Sec-Fetch-Mode: navigate';
 		$headers[] = 'Sec-Fetch-User: ?1';
-		$headers[] = 'Sec-Fetch-Dest: document';
 		$headers[] = 'Cookie: '.$this->cookie;	
 
 		$access = FacebookHelper::curl($url,false,$headers);
@@ -130,7 +124,8 @@ class FacebookPostReaction
 
 		$headers = array();
 		$headers[] = 'User-Agent: '.FacebookUserAgent::Get('Windows');
-		$headers[] = 'Cookie: '.$this->cookie;	
+		$headers[] = 'Sec-Fetch-User: ?1';
+		$headers[] = 'Cookie: '.$this->cookie;
 
 		$access = FacebookHelper::curl($url,$postdata,$headers);
 
